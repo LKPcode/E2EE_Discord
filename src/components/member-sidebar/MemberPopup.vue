@@ -34,7 +34,7 @@
                 <div class="flex text-sm gap-2 justify-between  mt-4  font-bold  text-gray-300 ">
                     <div class="cursor-pointer px-2 py-1 border-2 border-red-500 hover:bg-red-500 rounded-md">Remove</div>
                     <div class="cursor-pointer text-center flex-1 px-2 py-1 border-2 border-blue-500 hover:bg-blue-500 rounded-md">Message</div>
-                    <div class="cursor-pointer px-2 py-1 border-2 border-green-500 hover:bg-green-500 rounded-md">Add Friend</div>
+                    <div @click="() => { addContact(member.username, member.publicKey); toast.success('Contact Added')}" class="cursor-pointer px-2 py-1 border-2 border-green-500 hover:bg-green-500 rounded-md">Add Friend</div>
                 </div>
 
             </div>
@@ -45,9 +45,12 @@
 <script lang="ts" setup>
 import { onMounted, ref } from 'vue'
 import useGlobalStore from '../../composables/useGlobalStore';
+import useStorage from '../../composables/useStorage';
 import { defineProps } from 'vue'
+import {toast} from 'vue-sonner'
 
 const { shortenString, getAvatar } = useGlobalStore()
+const { addContact } = useStorage()
 
 const MemberPopup = ref<HTMLElement>()
 

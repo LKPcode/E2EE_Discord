@@ -29,14 +29,15 @@ const props = defineProps({
         type: Object as PropType<{
             invitation:string,
             public_key: string,
-            _id: string,
+            id: string,
         }>,
         required: true
     },
     index: {
         type: Number,
         required: true
-    }
+    },
+   
 })
 
 const emit = defineEmits(["removeInvitation"])
@@ -52,6 +53,7 @@ const openInvitation = async () => {
     emit("removeInvitation", props.index)
 
     toast.success("Invitation opened successfully")
+
     }).catch((err) => {
         console.log(err)
     })

@@ -52,6 +52,7 @@
 import { onMounted, ref } from 'vue'
 import useStorage from '../../composables/useStorage';
 import useGlobalStore from '../../composables/useGlobalStore';
+import { toast } from 'vue-sonner';
 
 const show = ref(false)
 const accountPopup = ref<HTMLElement>()
@@ -93,6 +94,7 @@ const { shortenString,
 const copyAddress = () => {
     navigator.clipboard.writeText(storage.value.personal_public_key)
     console.log("copied address")
+    toast.success("Address copied to clipboard")
 }
 
 const openSettings = () => {

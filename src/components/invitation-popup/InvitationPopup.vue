@@ -17,17 +17,18 @@
 
         <div class="flex-1 mt-3 overflow-auto scrollbar-custom">
             <!-- Friend -->
-            <div v-for="member in [1,2,3,4,5,6,7,8]" class="p-2 group  flex justify-center align-middle items-center hover:bg-primary rounded-md cursor-pointer">
+            <div v-for="contact in storage.contacts" class="p-2 group  flex justify-center align-middle items-center hover:bg-primary rounded-md cursor-pointer">
                 <div class="relative">
-                    <img class="rounded-full bg-gray-300" src="../../assets/vue.svg" alt="">
+                    <img class="rounded-full bg-gray-100 w-8" :src="getAvatar(contact.public_key)" alt="">
                     <div class="absolute right-0 bottom-0  w-3 h-3 rounded-full  bg-green-500"></div>
                 </div>
                 <div class="ml-3  flex-1">
-                    <div> <span class="text-lg font-bold text-gray-300">Deleted</span> <span
-                            class="text-sm text-gray-400">8fe...9a3</span> </div>
+                    <div> <span class="text-lg font-bold text-gray-300"> {{ contact.username }} </span> <span
+                            class="text-sm text-gray-400"> {{ shortenString(contact.public_key, 3) }} </span> </div>
 
                 </div>
-                <div class="py-1 px-3 border border-1 border-green-600 text-gray-300 group-hover:bg-hovercolor rounded-md">
+                <div @click="createInvitationInteraction(contact.public_key).then(() => {closeInvitePopup(); toast.success('Invitation sent successfully')})"
+                     class="py-1 px-3 border border-1 border-green-600 text-gray-300 group-hover:bg-hovercolor rounded-md">
                     Invite
                 </div>
 
@@ -48,11 +49,21 @@
 import useGlobalStore from '../../composables/useGlobalStore';
 import useInvitationInteraction from '../../composables/interactions/invitation_interaction';
 
+import useStorage from '../../composables/useStorage';
+
+import { toast } from 'vue-sonner'
+
 import {ref} from 'vue'
 
 
-const { showInvitePopup } = useGlobalStore()
+const { showInvitePopup,
+        shortenString,
+        getAvatar
+    } = useGlobalStore()
 const { createInvitationInteraction } = useInvitationInteraction()
+const { storage } = useStorage()
+
+
 
 const closeInvitePopup = () => {
     showInvitePopup.value = false;
@@ -64,6 +75,7 @@ const inviteUser = () => {
     createInvitationInteraction(publicKeyOfUser.value)
         .then((res) => {
             closeInvitePopup()
+            toast.success("Invitation sent successfully")
         })
 
 }

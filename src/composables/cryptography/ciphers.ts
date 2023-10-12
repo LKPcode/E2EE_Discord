@@ -93,14 +93,25 @@ const generateKeyPairHex = () => {
     return { privateKey:privateKeyHex, publicKey:publicKeyHex };
 }
 
+
+function extractModulusFromPEM(pem:string) {
+    const publicKey = forge.pki.publicKeyFromPem(pem);
+    return publicKey.n.toString(16); // hexadecimal representation of modulus
+}
+
+function reconstructPEMFromModulus(modulusHex:string, exponentHex = '10001') {
+    const modulus = new forge.jsbn.BigInteger(modulusHex, 16);
+    const exponent = new forge.jsbn.BigInteger(exponentHex, 16);
+    const newPublicKey = forge.pki.setRsaPublicKey(modulus, exponent);
+    return forge.pki.publicKeyToPem(newPublicKey);
+}
+
+
 // Convert a public key from object to hex
 const convertPublicKeyObjectToHex = (public_key:any) => {
     let publicKey = forge.pki.publicKeyToPem(public_key)
-    .split('\n').slice(1, -2).join('')
-    .replace(/\s+/g, '');
-    
-    publicKey = Buffer.from(publicKey, 'base64').toString('hex');
-    return publicKey;
+   
+    return extractModulusFromPEM(publicKey);
 }
 
 
@@ -116,14 +127,9 @@ const convertPrivateKeyObjectToHex = (private_key:any) => {
 
 
 const convertPublicKeyHexToObject = (public_key:string) => {
-    let publicKey: any  = Buffer.from(public_key, 'hex').toString('base64');
-    let publicKeyObj = forge.pki.publicKeyFromPem(
-        '-----BEGIN PUBLIC KEY-----\n' +
-        publicKey.match(/.{1,64}/g).join('\n') +
-        '\n-----END PUBLIC KEY-----\n'
-      );
-
-    return publicKeyObj;   
+    let publicKey = reconstructPEMFromModulus(public_key);
+    let publicKeyObj = forge.pki.publicKeyFromPem(publicKey);
+    return publicKeyObj;
 }
 
 const convertPrivateKeyHexToObject = (private_key:string) => {

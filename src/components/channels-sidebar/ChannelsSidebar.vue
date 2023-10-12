@@ -17,11 +17,15 @@
                 </span>
             </div>
             <div class="mx-4">
-                <div    @click="selectChannel(channel)" 
-                        v-for="channel in selected_room_data?.channels"
+                <div    
+                        @click="selectChannel(channel)" 
+                        v-for="channel in selected_room_channels"
                         :key="channel.channel_id"
-                    class="p-2 font-bold text-md text-gray-100 hover:bg-dark rounded-md cursor-pointer"> 
-                    {{ channel.channel_name }} </div>
+                        class="p-2 font-bold text-md text-gray-100 hover:bg-dark rounded-md cursor-pointer"
+                        :class="{'bg-dark': channel.channel_id == selected_channel_id}">
+                        <span class="text-gray-500 text-xl mr-1">#</span>
+                         {{ channel.channel_name }} 
+                </div>
             </div>
 
             <!-- <div v-if="selected_room_id != null" class="p-3 font-bold text-sm uppercase">
@@ -53,15 +57,24 @@ import useChannelInteraction from '../../composables/interactions/channel_intera
 
 const { loadSelectedChannelInteraction } = useChannelInteraction()
 
+import { useRouter } from 'vue-router';
+
 const { selected_room_data, 
+        selected_room_channels,
         selected_room_id, 
+        selected_channel_id,
         showCreateChannelPopup
             } = useGlobalStore()
 
 
 
+const router = useRouter()
 const selectChannel = (channel:Channel) => {
-    loadSelectedChannelInteraction(channel)
+    console.log("select channel", channel.channel_id)
+    router.push({ name: 'Room', params: { 
+        room_id:  selected_room_id.value,
+        channel_id: channel.channel_id } 
+    })
 }
 
 

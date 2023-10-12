@@ -1,25 +1,39 @@
 import useTemplate from './template.js';
 import { EncryptedInvitation } from '../../types.js';
 
+import { supabase } from './supabase_client.js';
+
 export default function useInvitations() {
         const template = useTemplate();
     
 
         const createInvitation = async (public_key:string, invitation:EncryptedInvitation) => {
             const stringifiedInvitation = JSON.stringify(invitation)
-            const res = await template.fetchPOST('/invitation/create', { public_key, invitation: stringifiedInvitation }, { about: 'createInvitation' })
-            return res
+            const {data, error} = await supabase.from('invitations').insert({
+                public_key,
+                invitation: stringifiedInvitation,
+            }).select('*').single()
+            console.log("createInvitationRequest", data)
+
+            if (error) throw error;
+
+            return data
         }
 
         const getInvitations = async (public_key:string) => {
-            const res = await template.fetchGET(`/invitation/${public_key}`, { about: 'getInvitations' })
-            return res
+            const {data, error} = await supabase.from('invitations').select('*').eq('public_key', public_key)
+            console.log("getInvitations", data)
+            if (error) throw error;
+            return data
         }
 
         // delete invitation request
         const deleteInvitation = async (id:string) => {
-            const res = await template.fetchGET(`/invitation/delete/${id}`, { about: 'deleteInvitation' })
-            return res
+            const {data, error} = await supabase.from('invitations').delete().eq('id', id)
+            console.log("deleteInvitation", data)
+            if (error) throw error;
+
+            return data
         }
 
 

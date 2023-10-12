@@ -5,12 +5,15 @@ import useGlobalStore from '../../composables/useGlobalStore';
 import useStorage from '../../composables/useStorage';
 import useRooms from '../../composables/requests/rooms';
 import useBlockchainInteraction from './blockchain_interaction';
-// import useBlockchain from '../requests/blockchain';
-import getWebSocket from '../sockets/sockets';
+
+import { useRouter } from 'vue-router';
+
+import { supabase } from '../requests/supabase_client'
 
 export default function useInvitationInteraction() {
 
     const { addMemberInteraction, updateMembersList, loadBlockChain } = useBlockchainInteraction()
+    const router = useRouter()
 
     const { createInvitation } = useInvitations()
     const { selected_room_id, 
@@ -26,7 +29,7 @@ export default function useInvitationInteraction() {
     // const { addBlock, getMembersList  } = useBlockchain();
     const { storage , joinRoom } = useStorage()
 
-    const socket = getWebSocket()
+    // const socket = getWebSocket()
 
 
 
@@ -55,13 +58,25 @@ export default function useInvitationInteraction() {
             let created_invitation =  await createInvitation(user_to_invite, invitation)
             console.log("Success Creating Invitation", created_invitation)
 
+            let temp_invitation_socket = supabase.channel(`invitation:${user_to_invite}`);
+            console.log("Send Invitation Broadcast to ", user_to_invite)
+            temp_invitation_socket.send({
+                type: 'broadcast',
+                event: 'new_invitation',
+                payload: {
+                    ...created_invitation
+                },
+            })
+            console.log("Invitation Broadcasted")
+            supabase.removeChannel(temp_invitation_socket)
+
         } catch (error) {
             console.log("Error Creating Invitation", error)
         }   
 
     }
 
-    const openInvitationInteraction = async (document_invitation: { invitation:string, public_key:string  ,_id:string }) => {
+    const openInvitationInteraction = async (document_invitation: { invitation:string, public_key:string  ,id:string }) => {
             //`Decrypts invitation and adds room to local storage`
             // Decrypt the invitation
 
@@ -96,23 +111,23 @@ export default function useInvitationInteraction() {
             await joinRoom(decrypted_invitation.room_id, decrypted_invitation.room_shared_keys, decrypted_invitation.room_name)
 
             // Get information about the room
-            selected_room_data.value = await getRoom(selected_room_id.value)
-            console.log("Selected Room Data: ", selected_room_data.value)
+            // selected_room_data.value = await getRoom(selected_room_id.value)
+            // console.log("Selected Room Data: ", selected_room_data.value)
 
             // Load the blockchain
             await loadBlockChain(selected_room_id.value!)
 
             // // Add a block to signiffy that the invitation has been opened 
             // // and the user has joined the room with the given username
-            await addMemberInteraction(selected_room_id.value!, "memberAddition")
+            await addMemberInteraction(selected_room_id.value!)
 
             // // Update the members list
             await updateMembersList()
 
-
+            router.push({name: 'Room', params: {room_id: selected_room_id.value}})
 
             // Delete the invitation from the database
-            deleteInvitation(document_invitation._id)
+            deleteInvitation(document_invitation.id)
         } catch (error) {
             console.log("Error Opening Invitation", error)
             throw new Error("Error Opening Invitation")

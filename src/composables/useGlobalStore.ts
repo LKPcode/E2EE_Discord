@@ -9,6 +9,9 @@ const showCreateRoomPopup = ref<boolean>(false)
 const showCreateChannelPopup = ref<boolean>(false)
 const showSettingsPopup = ref<boolean>(false)
 
+
+const invitations_list = ref<any>([])
+
 const selected_room_id = ref<string|null>(null)
 const selected_channel_id = ref<string|null>(null)
 
@@ -18,21 +21,16 @@ const selected_room_members = ref<MemberItem[]>([])
 const selected_room_members_obj = ref<Dictionary>({})
 // stores main content data of selected channel like messages and images
 const selected_channel_name = ref<string|null>(null)
-const selected_channel_content = ref<DecryptedMessage[]>([])
-// stores channels data and members data
+const selected_channel_content = ref<DecryptedMessage[]|null>([])
+// stores room data of selected room
 const selected_room_data = ref<Room>({
     _id: '',
     version: 0,
     room_id: '',
-    room_name: '',
-    channels: [{
-        _id: '',
-        version: 0,
-        channel_id: '',
-        channel_name: '',
-        channel_meta: '',
-    }]
+    room_name: ''
 })
+// stores a list of the channels of the selected room
+const selected_room_channels = ref<Channel[]>([])
 
 
 
@@ -45,9 +43,10 @@ export default function useGlobalStore() {
         if (str.length <= 2 * n) {
           return str; // No need to shorten the string
         }
-        
-        const firstChars = str.substring(0, n);
-        const lastChars = str.substring(str.length - n);
+        // Make upercase aswell
+        const firstChars = str.substring(0, n).toUpperCase();
+        const lastChars = str.substring(str.length - n).toUpperCase();
+
         
         return `${firstChars}...${lastChars}`;
     }
@@ -69,6 +68,7 @@ export default function useGlobalStore() {
         selected_channel_name.value = null
         selected_channel_content.value = []
         selected_room_data.value = {} as Room
+        selected_room_channels.value = []
     }
 
     
@@ -86,10 +86,12 @@ export default function useGlobalStore() {
         selected_room_members,
         selected_room_members_obj,
         selected_channel_name,
+        selected_room_channels,
         showCreateChannelPopup,
         shortenString,
         getAvatar,
         getRoomAvatar,
-        setSelectedStateToNull
+        setSelectedStateToNull,
+        invitations_list
     }
 }

@@ -12,6 +12,10 @@ interface Storage {
         personal_public_key: string,
         personal_private_key: string,
         username: string,
+        contacts: {
+            username: string,
+            public_key: string,
+        }[],
 }
 
 interface InvitationMessage {
@@ -61,19 +65,15 @@ interface Dictionary { // public key to username
 }
 
 interface Channel {
-    _id: string,
-    version: number,
     channel_id: string, 
     channel_name: string,
-    channel_meta: string,
 }
 
 interface Room {
-    _id: string,
     version: number,
     room_id: string,
     room_name: string,
-    channels: Channel[],
+    // channels: Channel[],
 }
 
 interface EncryptedMessage {

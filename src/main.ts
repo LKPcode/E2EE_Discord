@@ -1,7 +1,7 @@
 import { createApp } from 'vue'
 import './style.css'
 import App from './App.vue'
-import  './composables/sockets/sockets'
+import router from './router'
 
 import useStorage from './composables/useStorage'
 
@@ -28,11 +28,15 @@ if (localStorage.getItem("storage") !== null) {
         "personal_private_key": keyPair.privateKey,
         // Create a random username
         "username": "Anon" + Math.floor(Math.random() * 1000,).toString(),
+        "contacts": [],
     }))
     storage.value = JSON.parse(localStorage.getItem('storage') || '{}')
 }
 
-let app = createApp(App)
+// set router and mount app
+const app = createApp(App)
+
+app.use(router)
 
 app.config.globalProperties.window = window
 

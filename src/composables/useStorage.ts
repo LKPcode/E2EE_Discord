@@ -11,6 +11,7 @@ const storage = ref<Storage>(
             "personal_public_key": "",
             "personal_private_key": "",
             "username": "",
+            "contacts": [],
         }
     )
 
@@ -81,6 +82,16 @@ export default function useStorage() {
         return storage.value.username
     }
 
+    const addContact = (username:string, public_key:string) => {
+        console.log("Adding Contact", username, public_key)
+        storage.value.contacts.push({
+            username: username,
+            public_key: public_key,
+        })
+
+        localStorage.setItem('storage', JSON.stringify(storage.value))
+    }
+
 
 
 
@@ -97,6 +108,7 @@ export default function useStorage() {
         createSymmetricKey,
         getRoomKeys,
         getUsername,
+        addContact,
     }
 
     

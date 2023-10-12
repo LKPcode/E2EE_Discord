@@ -16,9 +16,9 @@
             <!-- Rooms List -->
         <div class=" flex-1 w-20 overflow-y-auto overflow-x-clip ">
             <!-- Room Item -->
-            <RoomButton v-for="room in storage.rooms" :key="room.room_id" :room="room" />
+            <RoomButton v-for="room in storage.rooms" :selected="room.room_id==selected_room_id" :key="room.room_id" :room="room" />
            
-            <InvitationButton v-for="(invitation, index) in invitations" 
+            <InvitationButton v-for="(invitation, index) in invitations_list" 
                             :key="index" 
                             :index="index" 
                             :invitation="invitation" 
@@ -52,18 +52,18 @@ import useInvitations from '../../composables/requests/invitations';
 
 import { ref, onMounted } from 'vue'
 
-const { showCreateRoomPopup } = useGlobalStore()
+const { showCreateRoomPopup, invitations_list, selected_room_id } = useGlobalStore()
 const { storage } = useStorage()
 const { getInvitations } = useInvitations()
 
-const invitations = ref([])
+
 
 onMounted(() => {
     getInvitationsFunc()
 })
 
 const removeInvitation = (index:number) => {
-    invitations.value.splice(index, 1)
+    invitations_list.value.splice(index, 1)
 }
 
 const getInvitationsFunc = () => {
@@ -71,7 +71,7 @@ const getInvitationsFunc = () => {
     getInvitations(storage.value.personal_public_key)
         .then((res) => {
             console.log("Success Getting Invitations for pk:" + storage.value.personal_public_key , res);
-            invitations.value = res
+            invitations_list.value = res
         }).catch((err) => {
             console.log("Error Getting Invitations", err);
         })

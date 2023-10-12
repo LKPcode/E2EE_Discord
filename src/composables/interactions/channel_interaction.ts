@@ -8,21 +8,26 @@ import { generateSymmetricKey,
 import forge from 'node-forge'
 import useBlockchainInteraction from "./blockchain_interaction"
 import { EncryptedMessage, DecryptedMessage, Channel } from "../../types"
-import getWebSocket from "../sockets/sockets"
+// import getWebSocket from "../sockets/sockets"
 import { Buffer } from "buffer"
+
+import { supabase } from "../requests/supabase_client"
+
+import { useRouter } from "vue-router"
 
 export default function useChannelInteraction() {
 
-    const socket = getWebSocket()
+    // const socket = getWebSocket()
 
     const { storage } = useStorage()
+    const router = useRouter()
 
     const {addChannelInteraction, getVerifiedChannelsInteraction} = useBlockchainInteraction()
 
     const { selected_channel_id, 
             selected_channel_content,
             selected_channel_name,
-            selected_room_data,
+            selected_room_channels,
             selected_room_id,
         } = useGlobalStore()
     const { getChannelContent, createChannel, addChannelContent } = useRooms()
@@ -35,18 +40,26 @@ export default function useChannelInteraction() {
             let channel_id = generateSymmetricKey();
 
             // Create channel on server
-            let res = await createChannel(selected_room_id.value, channel_id ,channel_name)
+            // let res = await createChannel(selected_room_id.value, channel_id, channel_name)
+            // console.log("Channel Created", res, selected_room_channels.value)
 
-            // // Add channel to room
-            // selected_room_data.value.channels.push(res.channel)
+            let new_channel : Channel = {
+                channel_id: channel_id,
+                channel_name: channel_name
+            }
+
+            // Add channel to room
+            selected_room_channels.value.push(new_channel)
 
             // Add block to blockchain
-            const channel_data = JSON.stringify(res.channel)
+            const channel_data = JSON.stringify(new_channel)
             await addChannelInteraction(selected_room_id.value!, channel_data)
 
             // Update channels from blockchain
             let channels = getVerifiedChannelsInteraction()
-            selected_room_data.value.channels = channels
+            selected_room_channels.value = channels
+
+            router.push({name: 'Room', params: {channel_id: channel_id, room_id: selected_room_id.value}})
 
         }catch(error){
             console.log("Error Creating Channel", error)
@@ -54,33 +67,29 @@ export default function useChannelInteraction() {
 
     }
 
-    const loadSelectedChannelInteraction = async (channel: Channel) => {
+    const loadSelectedChannelInteraction = async (channel_id: string) => {
         try{
-            let channel_id = channel.channel_id
 
             console.log("PREVIOUS Channel: " + selected_channel_id.value)
             console.log("Loading Channel: " + channel_id)
             // Unsubscribe from previous channel
-            socket.emit("leave-channel", selected_channel_id.value!)
+            // socket.emit("leave-channel", selected_channel_id.value!)
 
             console.log("Channel Selected: " + channel_id)
             // Update selected channel id
             selected_channel_id.value = channel_id
-            // Update selected channel name
-            selected_channel_name.value = channel.channel_name
-            // Clear selected channel content
-            selected_channel_content.value = []
+
+
+            // Loading channel content
+            selected_channel_content.value = null
+
             // Get channel content from server
             selected_channel_content.value = await getChannelContentInteraction( selected_room_id.value! ,channel_id)
 
             console.log("Channel Content: ", selected_channel_content.value)
 
-            // Subscribe to channel
-            socket.emit("join-channel", channel_id)
-
-            // // scroll to bottom of chat window
-            // const element = document.getElementById("chat-window");
-            // element!.scrollTop = element!.scrollHeight;
+            // Update selected channel name
+            selected_channel_name.value = selected_room_channels.value.find(channel => channel.channel_id === channel_id)?.channel_name as string
 
         }catch(error){
             console.log("Error Loading Channel", error)
@@ -138,7 +147,7 @@ export default function useChannelInteraction() {
 
             console.log("_Content",_content, unescape(encodeURIComponent(message as string)))
 
-            let room_keys = storage.value.rooms.find(room => room.room_id === room_id).room_shared_keys;
+            let room_keys = storage.value.rooms.find(room => room.room_id === room_id)!.room_shared_keys;
             let encryption_key = room_keys[room_keys.length - 1];
 
             console.log("Encryption Key",encryption_key)
@@ -154,12 +163,39 @@ export default function useChannelInteraction() {
             console.log("Sending Message",content)
 
             // Send message to server
-            let res = await addChannelContent(room_id, channel_id, content)
+            let res = await addChannelContent(channel_id, content)
 
 
             // Send message to other users
-            console.log("Sending Message to other users from id:", socket.id)
-            socket.emit("new_message", channel_id , content)
+            const socket_channel = supabase.getChannels().find(channel => channel.subTopic === channel_id)
+            console.log("Socket Channel", socket_channel)
+                // Send a message once the client is subscribed
+            if (socket_channel){
+                socket_channel.send({
+                    type: 'broadcast',
+                    event: 'new_message',
+                    payload: {
+                    channel_id: channel_id,
+                    ...content
+                    },
+                })
+            }
+
+            // if message type is image then we need to convert it to a URLObj
+            if(type !== "text"){
+                // Convert message to ByteStringBuffer
+                let kk = forge.util.decode64(_content.message)
+                let ok = Buffer.from(kk, 'binary');
+                let blob = new Blob([ok], { type: type })
+                _content.message = URL.createObjectURL(blob);
+            }
+
+
+            // if is array
+            if(Array.isArray(selected_channel_content.value)){
+                selected_channel_content.value.push({..._content,})
+            }
+            //   supabase.removeChannel(socket_channel)
 
             // // scroll to bottom of chat window
             // const element = document.getElementById("chat-window");
@@ -181,15 +217,16 @@ export default function useChannelInteraction() {
                 //     }
                 // }
 
-            let res = await getChannelContent(room_id, channel_id)
+            let res = await getChannelContent(channel_id)
+            console.log("Encrypted Channel Content", res)
 
-            let room_keys = storage.value.rooms.find(room => room.room_id === room_id).room_shared_keys;
+            let room_keys = storage.value.rooms.find(room => room.room_id === room_id)!.room_shared_keys;
 
             let unencrypted_messages: DecryptedMessage[]  = [];
 
             // Decrypt the messages
             // Should verify the signature here aswell
-            res.content.forEach( (message:EncryptedMessage) => {
+            res.forEach( (message:EncryptedMessage) => {
                 let decrypted_message = decryptMessageInteraction(message, room_id)
                 unencrypted_messages.push(decrypted_message)
             })
@@ -200,7 +237,7 @@ export default function useChannelInteraction() {
 
 
         const decryptMessageInteraction= (message:EncryptedMessage, room_id:string) => {
-            let room_keys = storage.value.rooms.find(room => room.room_id === room_id).room_shared_keys;
+            let room_keys = storage.value.rooms.find(room => room.room_id === room_id)!.room_shared_keys;
             // console.log(message, AES_decrypt(message.data, room_keys[message.version], message.IV))
             let data = JSON.parse(AES_decrypt(message.data, room_keys[message.version], message.IV))
              console.log("decrypted message: ", data)

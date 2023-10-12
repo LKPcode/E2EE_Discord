@@ -3,8 +3,8 @@ import BlockChain from "../cryptography/actions_blockchain";
 import useGlobalStore from "../useGlobalStore";
 import useStorage from "../useStorage";
 import { EncryptedBlock, MemberItem } from "../../types";
-import { ref, version } from "vue";
-import getwebSocket from "../sockets/sockets";
+import { ref } from "vue";
+import { supabase } from "../requests/supabase_client";
 
 const Blockchain = ref(new BlockChain([],[]));
 
@@ -13,10 +13,10 @@ export default function useBlockchainInteraction() {
     const { storage, getRoomKeys, getKeyPair, getUsername } = useStorage();
     const { selected_room_members, 
             selected_room_members_obj,
-            selected_room_data } = useGlobalStore();
-    const {createBlockchainCollection, addBlock, getBlockChain} = useBlockchain();
+            selected_room_channels } = useGlobalStore();
+    const { addBlock, getBlockChain} = useBlockchain();
 
-    const socket = getwebSocket();
+    // const socket = getwebSocket();
 
     const loadBlockChain = async (room_id: string) => {
 
@@ -38,17 +38,14 @@ export default function useBlockchainInteraction() {
         // Update Member List
         updateMembersList();
         // Update Channels List
-        selected_room_data.value.channels = getVerifiedChannelsInteraction();
-
+        selected_room_channels.value = getVerifiedChannelsInteraction();
     }
 
-    const createBlockchainCollectionInteraction = async (room_id: string) => {
-        const res = await createBlockchainCollection(room_id);
-        return res;
-    }
 
-    const addMemberInteraction = async (room_id: string, type: string) => {
 
+    const addMemberInteraction = async (room_id: string) => {
+
+        let type = "memberAddition";
         let version = 0;
         let keyPair = getKeyPair()
         let username = getUsername()
@@ -63,10 +60,25 @@ export default function useBlockchainInteraction() {
         const res = await addBlock(room_id, block);
 
         // emit new block to all members
-        socket.emit("new_block", room_id, block);
+        const socket_room = supabase.channel(`room:${room_id}`)
+        console.log("Socket Room", socket_room)
+            // Send a message once the client is subscribed
+        if (socket_room){
+            socket_room.send({
+                type: 'broadcast',
+                event: 'new_block',
+                payload: {
+                    room_id: room_id,
+                    ...block
+                },
+            })
+        }
+
+        supabase.removeChannel(socket_room)
         
         return res;
     }
+
 
     const addChannelInteraction = async (room_id: string, channel_data: string) => {
 
@@ -83,8 +95,20 @@ export default function useBlockchainInteraction() {
 
         const res = await addBlock(room_id, block);
 
-        // emit new block to all members 
-        socket.emit("new_block", room_id, block);
+        // emit new block to all members
+        const socket_room = supabase.getChannels().find(channel => channel.subTopic === `room:${room_id}`)
+        console.log("Socket Channel", socket_room)
+            // Send a message once the client is subscribed
+        if (socket_room){
+            socket_room.send({
+                type: 'broadcast',
+                event: 'new_block',
+                payload: {
+                    room_id: room_id,
+                    ...block
+                },
+            })
+        }
 
         return res;
     }
@@ -166,7 +190,6 @@ export default function useBlockchainInteraction() {
 
     return {
         loadBlockChain,
-        createBlockchainCollectionInteraction,
         addMemberInteraction,
         updateMembersList,
         getModeratorPublicKey,

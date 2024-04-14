@@ -1,4 +1,4 @@
-# "End-to-End Encrypted Discord: A Secure Communication Platform with historical Access for new Group Members"
+# End-to-End Encrypted Discord: A Secure Communication Platform with historical Access for new Group Members
 
 ## Introduction
 
@@ -33,6 +33,7 @@ The app supports the following features:
 - **Message History**: Group members can access past messages securely, even if they join the group after the messages were sent.
 - **The server does not have access to the messages**: The server only stores encrypted messages, ensuring that user data remains confidential.
 - **Metadata** like group members are stored encrypted on the server, ensuring that even this information is kept private.
+- **Real-time Updates**: The app uses WebSockets to provide real-time updates, ensuring that all group members are kept up to date with the latest messages and state changes.
 
 ## User Interface
 
